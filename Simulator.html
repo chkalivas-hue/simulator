@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PMP Mock Exam Dashboard</title>
+  <title>PMP Simulator Exam Dashboard</title>
   <style>
     * { box-sizing: border-box; }
 
@@ -240,7 +240,7 @@
   <script>
     const examNumbers = Array.from({ length: 18 }, (_, i) => i + 1);
     const examFolder = "Exams";
-    const storagePrefix = "pmp_mock_exam_stats_";
+    const storagePrefix = "pmp_sim_exam_stats_";
 
     let correctAnswers = 0;
     let totalAnswered = 0;
@@ -396,7 +396,7 @@
       menu.innerHTML = "";
 
       examNumbers.forEach(num => {
-        const examName = `Mock_Exam_${num}`;
+        const examName = `Sim_Exam_${num}`;
         const btn = document.createElement("button");
         btn.className = "exam-btn";
         btn.textContent = examName;
