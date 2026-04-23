@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PMP Mock Exam Dashboard</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Times New Roman", serif;
+      background: #e9e9e9;
+      color: #000;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 290px 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      background: rgb(44, 62, 80);
+      color: white;
+      padding: 10px 8px 20px;
+      overflow-y: auto;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+    }
+
+    .score {
+      font-size: 22px;
+      font-weight: bold;
+      margin: 0 0 8px;
+    }
+
+    .timer {
+      font-size: 22px;
+      font-weight: bold;
+      margin: 0 0 8px;
+    }
+
+    .best-score,
+    .best-time {
+      font-size: 18px;
+      font-weight: bold;
+      margin: 0 0 8px;
+    }
+
+    .best-time {
+      margin-bottom: 18px;
+    }
+
+    .exam-btn {
+      width: 100%;
+      display: block;
+      background: rgb(52, 73, 94);
+      color: white;
+      border: 3px solid #f0f0f0;
+      border-radius: 3px;
+      padding: 12px 10px;
+      margin: 10px 0;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .exam-btn:hover,
+    .exam-btn.active {
+      outline: 2px solid #6cb6ff;
+    }
+
+    .content {
+      padding: 20px 18px 40px;
+    }
+
+    .welcome {
+      min-height: calc(100vh - 40px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-size: 28px;
+      font-weight: bold;
+      padding: 20px;
+    }
+
+    .question-row {
+      display: grid;
+      grid-template-columns: minmax(500px, 1fr) 440px;
+      gap: 40px;
+      align-items: stretch;
+      margin-bottom: 40px;
+    }
+
+    .question-box {
+      border: 1px solid #d0d0d0;
+      background: #ececec;
+      padding: 12px 18px 18px;
+    }
+
+    .question-title {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 14px;
+    }
+
+    .question-text {
+      font-size: 17px;
+      line-height: 1.35;
+      margin-bottom: 18px;
+      max-width: 900px;
+    }
+
+    .option {
+      display: block;
+      margin: 18px 0;
+      font-size: 17px;
+      cursor: pointer;
+    }
+
+    .option input {
+      margin-right: 10px;
+      transform: translateY(1px);
+    }
+
+    .check-btn {
+      margin-top: 14px;
+      padding: 10px 28px;
+      font-size: 18px;
+      font-weight: bold;
+      font-family: "Times New Roman", serif;
+      cursor: pointer;
+    }
+
+    .check-btn:disabled {
+      cursor: default;
+      opacity: 0.75;
+    }
+
+    .result-box {
+      border: 1px solid #666;
+      background: whitesmoke;
+      min-height: 250px;
+      padding: 14px;
+      overflow-wrap: break-word;
+    }
+
+    .result-title {
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 18px;
+    }
+
+    .result-status {
+      font-size: 22px;
+      font-weight: bold;
+      margin: 18px 0 12px;
+      text-align: center;
+    }
+
+    .result-explanation {
+      font-size: 17px;
+      line-height: 1.4;
+      white-space: pre-wrap;
+    }
+
+    .correct-option {
+      font-weight: bold;
+      color: darkgreen;
+    }
+
+    .completed-banner {
+      border: 2px solid #4f8a10;
+      background: #e8f6da;
+      padding: 18px 20px;
+      margin-bottom: 25px;
+      font-size: 24px;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    .error-box {
+      background: #fff0f0;
+      border: 1px solid #d88;
+      color: #900;
+      padding: 16px;
+      font-size: 18px;
+      margin: 20px 0;
+    }
+
+    @media (max-width: 1200px) {
+      .question-row {
+        grid-template-columns: 1fr;
+      }
+
+      .result-box {
+        min-height: 180px;
+      }
+    }
+
+    @media (max-width: 800px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: relative;
+        height: auto;
+      }
+
+      .welcome {
+        min-height: auto;
+        padding: 60px 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div id="score" class="score">Score: 0 / 0</div>
+      <div id="timer" class="timer">Time: 00:00:00</div>
+      <div id="bestScore" class="best-score">Best Score: -</div>
+      <div id="bestTime" class="best-time">Best Time: -</div>
+      <div id="examMenu"></div>
+    </aside>
+
+    <main class="content" id="content">
+      <div class="welcome">
+        Choose the exam you want on the left, Stay Calm and Good Luck!!
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const examNumbers = Array.from({ length: 18 }, (_, i) => i + 1);
+    const examFolder = "Exams";
+    const storagePrefix = "pmp_mock_exam_stats_";
+
+    let correctAnswers = 0;
+    let totalAnswered = 0;
+    let currentExam = null;
+    let totalQuestions = 0;
+    let examCompleted = false;
+
+    let timerInterval = null;
+    let elapsedSeconds = 0;
+
+    function updateScoreDisplay() {
+      document.getElementById("score").textContent = `Score: ${correctAnswers} / ${totalAnswered}`;
+    }
+
+    function formatTime(totalSeconds) {
+      const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
+      const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
+      const seconds = String(totalSeconds % 60).padStart(2, "0");
+      return `${hours}:${minutes}:${seconds}`;
+    }
+
+    function updateTimerDisplay() {
+      document.getElementById("timer").textContent = `Time: ${formatTime(elapsedSeconds)}`;
+    }
+
+    function stopTimer() {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+    }
+
+    function resetTimer() {
+      stopTimer();
+      elapsedSeconds = 0;
+      updateTimerDisplay();
+    }
+
+    function startTimer() {
+      stopTimer();
+      elapsedSeconds = 0;
+      updateTimerDisplay();
+
+      timerInterval = setInterval(() => {
+        elapsedSeconds++;
+        updateTimerDisplay();
+      }, 1000);
+    }
+
+    function getStatsKey(examName) {
+      return `${storagePrefix}${examName}`;
+    }
+
+    function getSavedStats(examName) {
+      try {
+        const raw = localStorage.getItem(getStatsKey(examName));
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    }
+
+    function saveStats(examName, stats) {
+      localStorage.setItem(getStatsKey(examName), JSON.stringify(stats));
+    }
+
+    function updateBestDisplay() {
+      const bestScoreEl = document.getElementById("bestScore");
+      const bestTimeEl = document.getElementById("bestTime");
+
+      if (!currentExam) {
+        bestScoreEl.textContent = "Best Score: -";
+        bestTimeEl.textContent = "Best Time: -";
+        return;
+      }
+
+      const stats = getSavedStats(currentExam);
+
+      if (!stats) {
+        bestScoreEl.textContent = "Best Score: -";
+        bestTimeEl.textContent = "Best Time: -";
+        return;
+      }
+
+      const scoreText = typeof stats.bestCorrect === "number" && typeof stats.totalQuestions === "number"
+        ? `${stats.bestCorrect} / ${stats.totalQuestions}`
+        : "-";
+
+      const timeText = typeof stats.bestTimeSeconds === "number"
+        ? formatTime(stats.bestTimeSeconds)
+        : "-";
+
+      bestScoreEl.textContent = `Best Score: ${scoreText}`;
+      bestTimeEl.textContent = `Best Time: ${timeText}`;
+    }
+
+    function storeExamCompletionStats() {
+      if (!currentExam) return;
+
+      const previous = getSavedStats(currentExam);
+      const currentBestCorrect = correctAnswers;
+      const currentTime = elapsedSeconds;
+
+      if (!previous) {
+        saveStats(currentExam, {
+          bestCorrect: currentBestCorrect,
+          totalQuestions: totalQuestions,
+          bestTimeSeconds: currentTime
+        });
+        updateBestDisplay();
+        return;
+      }
+
+      const previousBestCorrect = typeof previous.bestCorrect === "number" ? previous.bestCorrect : -1;
+      const previousBestTime = typeof previous.bestTimeSeconds === "number" ? previous.bestTimeSeconds : Number.MAX_SAFE_INTEGER;
+
+      const hasBetterScore = currentBestCorrect > previousBestCorrect;
+      const sameScoreBetterTime = currentBestCorrect === previousBestCorrect && currentTime < previousBestTime;
+
+      if (hasBetterScore || sameScoreBetterTime) {
+        saveStats(currentExam, {
+          bestCorrect: currentBestCorrect,
+          totalQuestions: totalQuestions,
+          bestTimeSeconds: currentTime
+        });
+      }
+
+      updateBestDisplay();
+    }
+
+    function showCompletionBanner() {
+      const content = document.getElementById("content");
+      const banner = document.createElement("div");
+      banner.className = "completed-banner";
+      banner.id = "completedBanner";
+      banner.textContent = `Exam completed! Final Score: ${correctAnswers} / ${totalQuestions} | Time: ${formatTime(elapsedSeconds)}`;
+      content.prepend(banner);
+    }
+
+    function finishExamIfNeeded() {
+      if (examCompleted) return;
+
+      if (totalAnswered === totalQuestions && totalQuestions > 0) {
+        examCompleted = true;
+        stopTimer();
+        storeExamCompletionStats();
+        showCompletionBanner();
+      }
+    }
+
+    function buildMenu() {
+      const menu = document.getElementById("examMenu");
+      menu.innerHTML = "";
+
+      examNumbers.forEach(num => {
+        const examName = `Mock_Exam_${num}`;
+        const btn = document.createElement("button");
+        btn.className = "exam-btn";
+        btn.textContent = examName;
+        btn.dataset.exam = examName;
+        btn.addEventListener("click", () => loadExamContent(examName, btn));
+        menu.appendChild(btn);
+      });
+    }
+
+    async function loadExamContent(examName, clickedBtn) {
+      document.querySelectorAll(".exam-btn").forEach(b => b.classList.remove("active"));
+      clickedBtn.classList.add("active");
+
+      currentExam = examName;
+      correctAnswers = 0;
+      totalAnswered = 0;
+      totalQuestions = 0;
+      examCompleted = false;
+
+      updateScoreDisplay();
+      updateBestDisplay();
+      startTimer();
+
+      const content = document.getElementById("content");
+      content.innerHTML = "";
+
+      const filePath = `${examFolder}/${examName}.json`;
+
+      try {
+        const response = await fetch(filePath, { cache: "no-store" });
+
+        if (!response.ok) {
+          throw new Error(`Could not load ${filePath}`);
+        }
+
+        const root = await response.json();
+
+        if (!root || !Array.isArray(root.Questions)) {
+          throw new Error(`Invalid JSON format in ${filePath}`);
+        }
+
+        totalQuestions = root.Questions.length;
+        renderQuestions(root.Questions);
+      } catch (err) {
+        stopTimer();
+        content.innerHTML = `
+          <div class="error-box">
+            Failed to load <strong>${filePath}</strong>.<br><br>
+            Check that:
+            <ul>
+              <li>the file exists in the <strong>Exams</strong> folder</li>
+              <li>the filename is exactly <strong>${examName}.json</strong></li>
+              <li>the JSON has the format <strong>{ "Questions": [...] }</strong></li>
+              <li>the <strong>CorrectIndex</strong> is a list, e.g. <strong>[1, 3]</strong></li>
+            </ul>
+            <div><strong>Error:</strong> ${err.message}</div>
+          </div>
+        `;
+      }
+    }
+
+    function normalizeCorrectIndexes(correctIndexValue) {
+      if (Array.isArray(correctIndexValue)) {
+        return [...new Set(correctIndexValue.map(Number).filter(Number.isInteger))];
+      }
+
+      if (typeof correctIndexValue === "number") {
+        return [correctIndexValue];
+      }
+
+      return [];
+    }
+
+    function areArraysEqualAsSets(arr1, arr2) {
+      if (arr1.length !== arr2.length) return false;
+
+      const sorted1 = [...arr1].sort((a, b) => a - b);
+      const sorted2 = [...arr2].sort((a, b) => a - b);
+
+      return sorted1.every((value, index) => value === sorted2[index]);
+    }
+
+    function renderQuestions(questions) {
+      const content = document.getElementById("content");
+      content.innerHTML = "";
+
+      questions.forEach((q, index) => {
+        const row = document.createElement("section");
+        row.className = "question-row";
+
+        const questionBox = document.createElement("div");
+        questionBox.className = "question-box";
+
+        const qTitle = document.createElement("div");
+        qTitle.className = "question-title";
+        qTitle.textContent = `Question ${index + 1}`;
+
+        const qText = document.createElement("div");
+        qText.className = "question-text";
+        qText.textContent = q.Text ?? "";
+
+        questionBox.appendChild(qTitle);
+        questionBox.appendChild(qText);
+
+        const optionsWrap = document.createElement("div");
+        const groupName = `question_${index}`;
+        const correctIndexes = normalizeCorrectIndexes(q.CorrectIndex);
+
+        (q.Options || []).forEach((optionText, i) => {
+          const label = document.createElement("label");
+          label.className = "option";
+
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.name = groupName;
+          checkbox.value = i;
+
+          const optionLabel = String.fromCharCode(65 + i);
+          const span = document.createElement("span");
+          span.textContent = `${optionLabel}. ${optionText}`;
+
+          label.appendChild(checkbox);
+          label.appendChild(span);
+          optionsWrap.appendChild(label);
+        });
+
+        questionBox.appendChild(optionsWrap);
+
+        const checkBtn = document.createElement("button");
+        checkBtn.className = "check-btn";
+        checkBtn.textContent = "Check";
+
+        const resultBox = document.createElement("div");
+        resultBox.className = "result-box";
+
+        const resultTitle = document.createElement("div");
+        resultTitle.className = "result-title";
+        resultTitle.textContent = "Answer and click Check";
+
+        const resultStatus = document.createElement("div");
+        resultStatus.className = "result-status";
+
+        const resultExplanation = document.createElement("div");
+        resultExplanation.className = "result-explanation";
+
+        resultBox.appendChild(resultTitle);
+        resultBox.appendChild(resultStatus);
+        resultBox.appendChild(resultExplanation);
+
+        checkBtn.addEventListener("click", () => {
+          if (examCompleted) return;
+
+          const selectedCheckboxes = questionBox.querySelectorAll(`input[name="${groupName}"]:checked`);
+
+          if (selectedCheckboxes.length === 0) {
+            alert("Please select at least one answer first!");
+            return;
+          }
+
+          checkBtn.disabled = true;
+
+          const allCheckboxes = questionBox.querySelectorAll(`input[name="${groupName}"]`);
+          allCheckboxes.forEach(c => c.disabled = true);
+
+          const selectedIndexes = Array.from(selectedCheckboxes).map(cb => Number(cb.value));
+          const isCorrect = areArraysEqualAsSets(selectedIndexes, correctIndexes);
+
+          const allOptions = questionBox.querySelectorAll(".option");
+          allOptions.forEach((labelEl, i) => {
+            const span = labelEl.querySelector("span");
+
+            if (correctIndexes.includes(i)) {
+              labelEl.classList.add("correct-option");
+              if (span && !span.textContent.endsWith(" ✓")) {
+                span.textContent += " ✓";
+              }
+            }
+          });
+
+          totalAnswered++;
+          if (isCorrect) correctAnswers++;
+
+          updateScoreDisplay();
+
+          resultBox.style.background = isCorrect ? "lightgreen" : "salmon";
+          resultStatus.textContent = isCorrect ? "Correct!" : "Wrong!";
+          resultExplanation.textContent = `Explanation:\n${q.Explanation ?? ""}`;
+
+          finishExamIfNeeded();
+        });
+
+        questionBox.appendChild(checkBtn);
+        row.appendChild(questionBox);
+        row.appendChild(resultBox);
+        content.appendChild(row);
+      });
+    }
+
+    updateScoreDisplay();
+    updateTimerDisplay();
+    updateBestDisplay();
+    buildMenu();
+  </script>
+</body>
+</html>
